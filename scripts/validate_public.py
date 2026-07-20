@@ -4,6 +4,7 @@ from __future__ import annotations
 import pathlib, re, sys
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 REQUIRED={
+ 'bin/codex-hud','bin/codo','install.sh','uninstall.sh',
  'README.md','LICENSE','SECURITY.md','CONTRIBUTING.md','CODE_OF_CONDUCT.md','SUPPORT.md','CHANGELOG.md',
  'docs/ARCHITECTURE.md','docs/CONFIGURATION.md','docs/COMPATIBILITY.md','docs/PRIVACY.md','docs/TROUBLESHOOTING.md','docs/RELEASING.md','docs/FAQ.md',
  '.github/CODEOWNERS','.github/PULL_REQUEST_TEMPLATE.md','.github/ISSUE_TEMPLATE/bug_report.yml',

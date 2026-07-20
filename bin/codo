@@ -1,0 +1,98 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# codo is a transparent Codex launcher: launcher settings use CODO_*
+# environment variables so every command-line argument remains Codex-owned.
+codex_command="${CODO_CODEX_COMMAND:-codex}"
+hud_command="${CODO_HUD_COMMAND:-codex-hud}"
+tmux_mode="${CODO_TMUX:-auto}"
+hud_mode="${CODO_HUD:-auto}"
+codex_home="${CODEX_HOME:-$HOME/.codex}"
+
+case "$tmux_mode" in
+    auto|on|required|off) ;;
+    *) printf 'codo: CODO_TMUX must be auto, on, required, or off\n' >&2; exit 2 ;;
+esac
+case "$hud_mode" in
+    auto|on|required|off) ;;
+    *) printf 'codo: CODO_HUD must be auto, on, required, or off\n' >&2; exit 2 ;;
+esac
+
+# Start an isolated tmux session for an interactive HUD. `printf %q` preserves
+# each original Codex argument across the one shell boundary.
+if [[ -z "${TMUX:-}" && "$tmux_mode" != off ]]; then
+    if command -v tmux >/dev/null 2>&1; then
+        session="codo-$(date +%Y%m%d-%H%M%S)-$$"
+        printf -v relaunch '%q ' "$0" "$@"
+        exec tmux new-session -s "$session" -c "$PWD" "$relaunch"
+    elif [[ "$tmux_mode" == required ]]; then
+        printf 'codo: tmux is required but was not found\n' >&2
+        exit 1
+    else
+        printf 'codo: tmux not found; starting Codex without the HUD pane\n' >&2
+    fi
+fi
+
+hud_pane=''
+cleanup() {
+    if [[ "$hud_pane" == %* ]] && command -v tmux >/dev/null 2>&1; then
+        tmux kill-pane -t "$hud_pane" >/dev/null 2>&1 || true
+    fi
+}
+trap cleanup EXIT
+
+if [[ -n "${TMUX:-}" && "$hud_mode" != off ]]; then
+    if command -v "$hud_command" >/dev/null 2>&1; then
+        if hud_message="$("$hud_command" --tmux 2>&1)"; then
+            hud_pane="${hud_message##* }"
+        elif [[ "$hud_mode" == required ]]; then
+            printf 'codo: unable to start HUD: %s\n' "$hud_message" >&2
+            exit 1
+        else
+            printf 'codo: unable to start HUD; continuing without it\n' >&2
+        fi
+    elif [[ "$hud_mode" == required ]]; then
+        printf 'codo: %s was not found\n' "$hud_command" >&2
+        exit 1
+    fi
+fi
+
+codex_args=()
+has_profile=false
+has_model=false
+has_reasoning=false
+expect_config=false
+for arg in "$@"; do
+    if $expect_config; then
+        [[ "$arg" == model_reasoning_effort=* ]] && has_reasoning=true
+        expect_config=false
+        continue
+    fi
+    case "$arg" in
+        --) break ;;
+        -p|--profile|--profile=*) has_profile=true ;;
+        -m|--model|--model=*) has_model=true ;;
+        -c|--config) expect_config=true ;;
+        -c=model_reasoning_effort=*|--config=model_reasoning_effort=*) has_reasoning=true ;;
+    esac
+done
+
+if [[ -f "$codex_home/codo.config.toml" && "$has_profile" == false ]]; then
+    codex_args+=(--profile codo)
+fi
+if [[ -n "${CODO_MODEL:-}" && "$has_model" == false ]]; then
+    codex_args+=(--model "$CODO_MODEL")
+fi
+if [[ -n "${CODO_REASONING_EFFORT:-}" && "$has_reasoning" == false ]]; then
+    if [[ ! "$CODO_REASONING_EFFORT" =~ ^[a-zA-Z0-9_-]+$ ]]; then
+        printf 'codo: CODO_REASONING_EFFORT contains unsupported characters\n' >&2
+        exit 2
+    fi
+    codex_args+=(--config "model_reasoning_effort=\"$CODO_REASONING_EFFORT\"")
+fi
+
+set +e
+"$codex_command" "${codex_args[@]}" "$@"
+status=$?
+set -e
+exit "$status"

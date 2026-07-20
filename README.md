@@ -4,7 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/)
 
-A colorful, zero-dependency telemetry HUD for Codex CLI and Oh My Codex. It provides a live terminal dashboard, a compact tmux status segment, and a maximal native Codex TUI status line.
+A colorful, zero-dependency telemetry HUD for Codex CLI and Oh My Codex. It provides a live terminal dashboard, a compact tmux status segment, a concise native Codex TUI status line, and the optional `codo` launcher.
 
 ```text
 ╭─[ CODEX HUD+  LIVE TELEMETRY ]──────────────────────────────────────────────────────────╮
@@ -21,7 +21,7 @@ CTX █████████░░░ 72%  ACCOUNT ████░░░░�
 ## Features
 
 - User, hostname, current directory, project and Git branch/dirty state
-- Model, reasoning effort, Codex version and shortened session identifier
+- Active model, reasoning effort, approval/sandbox policy, Codex version and shortened session identifier
 - Cached input, non-cached input, output, reasoning and total token counts
 - Context-window use with a color-coded progress bar
 - Account plan, usage window, reset time and available credits
@@ -31,6 +31,7 @@ CTX █████████░░░ 72%  ACCOUNT ████░░░░�
 - Full OMX mode, team, turn and workflow status when OMX is installed
 - ANSI colors with a `NO_COLOR` fallback
 - No third-party Python dependencies and no outbound telemetry
+- `codo` launcher with automatic tmux/HUD lifecycle and transparent Codex option forwarding
 
 The HUD does not estimate billing. It shows `cost:n/a` because Codex session telemetry does not currently provide an authoritative monetary cost.
 
@@ -57,9 +58,10 @@ cd codex_hud
 The installer:
 
 1. Installs `codex-hud` into `~/.local/bin`.
-2. Adds the maximal Codex status line only when no user-owned status line exists.
-3. Adds a clearly marked, replaceable block to `~/.tmux.conf`.
-4. Reloads tmux when run inside an active tmux client.
+2. Installs `codo`, an optional Codex launcher that manages the tmux HUD pane.
+3. Adds a concise, non-repeating Codex status line only when no user-owned status line exists.
+4. Adds a clearly marked, replaceable block to `~/.tmux.conf`.
+5. Reloads tmux when run inside an active tmux client.
 
 Restart Codex once after installation so it reloads `[tui].status_line`.
 
@@ -73,7 +75,25 @@ codex-hud --tmux         # upgrade an existing HUD pane or open a new pane
 codex-hud --interval 1   # set the watch refresh interval
 codex-hud --version      # print the installed version
 NO_COLOR=1 codex-hud     # disable ANSI color
+codo                     # launch Codex with an automatically managed HUD
+codo --search            # pass any Codex option through unchanged
+codo exec "run tests"    # Codex subcommands and arguments also pass through
 ```
+
+### `codo` launcher
+
+`codo` enters a dedicated tmux session when needed, opens the HUD pane, runs Codex, and removes the pane when Codex exits. It does not change the Codex security policy. All arguments belong to Codex and are forwarded in their original order.
+
+If `~/.codex/codo.config.toml` exists, `codo` loads it as the standard Codex `codo` profile. This is the recommended place for launcher-specific model, reasoning, sandbox, or approval defaults:
+
+```toml
+# ~/.codex/codo.config.toml
+model_reasoning_effort = "medium"
+approval_policy = "on-request"
+sandbox_mode = "workspace-write"
+```
+
+Environment controls are documented in [Configuration](docs/CONFIGURATION.md). Explicit `--profile`, `--model`, and `model_reasoning_effort` arguments suppress the matching launcher default.
 
 ### Optional memory status
 
@@ -87,7 +107,7 @@ The value is displayed but is never interpreted as a command or transmitted.
 
 ## Display layers
 
-1. **Native Codex footer**: model, branch, context, tokens, usage limits and session information.
+1. **Native Codex footer**: a non-repeating model, branch, context, token, limit and session summary.
 2. **tmux status bar**: a compact model/token/account/system summary.
 3. **HUD pane**: colored multi-line telemetry, progress graphics, robots and OMX state.
 

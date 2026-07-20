@@ -9,10 +9,12 @@ Linux /proc ─────────┤                                      
 Git / tmux / OMX ────┘                                      └─────> tmux pane/status bar
 ```
 
+The separate `codo` shell launcher owns only process lifecycle: it enters tmux, asks `codex-hud --tmux` for a pane, forwards arguments to Codex, and removes that pane on exit. Codex continues to own all CLI option parsing and security policy.
+
 ## Collectors
 
 - **Codex config:** model, reasoning effort and configured MCP server count.
-- **Session telemetry:** newest `token_count` event only.
+- **Session telemetry:** newest `token_count` and `turn_context` events for usage plus active model/policy data.
 - **Linux process data:** memory totals and RSS through `/proc`.
 - **Git:** repository root, branch and dirty state.
 - **OMX:** optional rendered orchestration status.

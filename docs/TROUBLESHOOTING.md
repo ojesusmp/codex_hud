@@ -10,8 +10,10 @@
 | `--tmux` reports tmux required | Command is outside a tmux client. | Start tmux, then rerun `codex-hud --tmux`. |
 | HUD pane duplicates an OMX pane | OMX recreated its managed pane. | Keep both, or run `codex-hud --tmux` again to reuse the first HUD-like pane. |
 | Native footer does not change | Codex loaded configuration before installation. | Restart Codex once. |
+| Native footer repeats model or context | An older managed status line is still loaded. | Re-run `./install.sh`, then restart Codex. |
 | Existing native footer is unchanged | Installer preserved a user-owned `status_line`. | Edit `[tui].status_line` manually using the documented field list. |
 | tmux bar does not change | tmux has not reloaded configuration. | Run `tmux source-file ~/.tmux.conf`. |
+| `codo` starts without a HUD | tmux or `codex-hud` is unavailable. | Install both dependencies or run with `CODO_TMUX=required CODO_HUD=required` for a hard failure. |
 
 For diagnostic output that is safer to share, use:
 

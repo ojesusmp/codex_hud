@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-rm -f "$HOME/.local/bin/codex-hud"
+rm -f "$HOME/.local/bin/codex-hud" "$HOME/.local/bin/codo"
 python3 - <<'PY'
 from pathlib import Path
 import re
@@ -15,4 +15,4 @@ if cfg.exists():
     s=re.sub(r'(?m)^# codex-hud:managed-status-line\nstatus_line\s*=.*\n?','',s,count=1)
     cfg.write_text(s)
 PY
-printf 'Removed CODEX HUD+ executable and managed configuration.\n'
+printf 'Removed CODEX HUD+ executables and managed configuration.\n'
