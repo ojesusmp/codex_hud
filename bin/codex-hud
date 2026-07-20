@@ -1,0 +1,154 @@
+#!/usr/bin/env python3
+"""Codex HUD+: on-device, read-only session and system telemetry."""
+from __future__ import annotations
+import argparse, datetime as dt, glob, json, os, pathlib, re, shutil, socket, subprocess, sys, time
+VERSION='1.0.0'
+HOME=pathlib.Path.home(); CODEX=HOME/'.codex'
+ANSI_RE=re.compile(r'\x1b\[[0-9;]*m')
+COLOR=sys.stdout.isatty() and not os.getenv('NO_COLOR')
+C={'reset':'\033[0m','bold':'\033[1m','dim':'\033[2m','cyan':'\033[38;5;51m','blue':'\033[38;5;75m','green':'\033[38;5;84m','yellow':'\033[38;5;220m','orange':'\033[38;5;208m','red':'\033[38;5;203m','violet':'\033[38;5;141m','white':'\033[38;5;255m','gray':'\033[38;5;245m'}
+def paint(text,tone='white',bold=False):
+    if not COLOR: return str(text)
+    return (C['bold'] if bold else '')+C.get(tone,C['white'])+str(text)+C['reset']
+def tone_for(pct,warn=70,critical=90):
+    try: p=float(pct)
+    except: return 'gray'
+    return 'red' if p>=critical else 'yellow' if p>=warn else 'green'
+def bar(pct,width=12):
+    try: p=max(0,min(100,float(pct)))
+    except: p=0
+    n=round(width*p/100)
+    return paint('█'*n,tone_for(p))+paint('░'*(width-n),'gray')
+def terminal_width(): return max(80,shutil.get_terminal_size((126,24)).columns)
+def rule(left='╭',right='╮',title=''):
+    w=terminal_width(); label=f'─[ {title} ]' if title else ''
+    return paint(left+label+'─'*max(0,w-2-len(label))+right,'cyan',True)
+
+def human(n):
+    try: n=float(n)
+    except: return '0'
+    for u in ('','K','M','G','T'):
+        if abs(n)<1000: return f'{n:.1f}{u}' if n<100 and n!=int(n) else f'{n:.0f}{u}'
+        n/=1000
+    return f'{n:.1f}P'
+def gib(kb): return f'{kb/1048576:.1f}G'
+def read_text(p):
+    try: return pathlib.Path(p).read_text(errors='replace')
+    except: return ''
+def config():
+    t=read_text(CODEX/'config.toml')
+    def q(k,d='?'):
+        m=re.search(rf'(?m)^{re.escape(k)}\s*=\s*"([^"]+)"',t); return m.group(1) if m else d
+    return {'model':q('model'),'reason':q('model_reasoning_effort'),'mcp':len(re.findall(r'(?m)^\[mcp_servers\.',t))}
+def latest_usage():
+    files=glob.glob(str(CODEX/'sessions/**/*.jsonl'),recursive=True)
+    if not files: return {},None
+    p=max(files,key=lambda x: os.path.getmtime(x))
+    try:
+        with open(p,'rb') as f:
+            f.seek(0,2); end=f.tell(); f.seek(max(0,end-1048576)); data=f.read().decode(errors='ignore')
+        for line in reversed(data.splitlines()):
+            if '"type":"token_count"' not in line: continue
+            o=json.loads(line); pay=o.get('payload',{}); return pay,p
+    except: pass
+    return {},p
+def memstats():
+    vals={}
+    for ln in read_text('/proc/meminfo').splitlines():
+        if ':' in ln:
+            k,v=ln.split(':',1)
+            try: vals[k]=int(v.strip().split()[0])
+            except: pass
+    total=vals.get('MemTotal',0); used=total-vals.get('MemAvailable',0)
+    rss={'codex':0,'node':0}; top=('?',0)
+    for d in glob.glob('/proc/[0-9]*'):
+        try:
+            cmd=pathlib.Path(d,'cmdline').read_bytes().replace(b'\0',b' ').decode(errors='ignore').lower()
+            st=read_text(pathlib.Path(d,'status')); m=re.search(r'(?m)^VmRSS:\s+(\d+)',st); r=int(m.group(1)) if m else 0
+            name=pathlib.Path(d,'comm').read_text().strip()
+            if 'codex' in cmd: rss['codex']+=r
+            if re.search(r'(^|[/ ])node(?: |$)',cmd): rss['node']+=r
+            if r>top[1]: top=(name,r)
+        except: pass
+    return used,total,rss,top
+def gitinfo():
+    try:
+        root=subprocess.check_output(['git','rev-parse','--show-toplevel'],stderr=subprocess.DEVNULL,text=True,timeout=.3).strip()
+        br=subprocess.check_output(['git','branch','--show-current'],stderr=subprocess.DEVNULL,text=True,timeout=.3).strip() or 'detached'
+        dirty='+' if subprocess.run(['git','diff-index','--quiet','HEAD','--'],stderr=subprocess.DEVNULL,timeout=.3).returncode else ''
+        return pathlib.Path(root).name,br+dirty
+    except: return pathlib.Path.cwd().name,'-'
+def hook_count():
+    roots=[pathlib.Path.cwd()/'.omx/hooks',HOME/'.omx/hooks']
+    return sum(1 for r in roots if r.exists() for p in r.iterdir() if p.is_file() and p.suffix in ('.js','.mjs','.cjs','.py'))
+def agent_count():
+    candidates=glob.glob(str(HOME/'.omx-runs/*/.omx/state/subagent-tracking.json'))
+    active=0
+    if candidates:
+        try:
+            d=json.loads(read_text(max(candidates,key=os.path.getmtime)))
+            for s in d.get('sessions',{}).values():
+                for t in s.get('threads',{}).values():
+                    if t.get('kind')!='leader' and t.get('status') not in ('closed','completed','failed','cancelled'): active+=1
+        except: pass
+    return active
+def omx_line():
+    try:
+        s=subprocess.check_output(['omx','hud','--preset=full'],stderr=subprocess.DEVNULL,text=True,timeout=1)
+        return re.sub(r'\x1b\[[0-9;]*m','',s).strip()
+    except: return 'OMX unavailable'
+def uptime():
+    try:
+        sec=int(float(read_text('/proc/uptime').split()[0])); d,sec=divmod(sec,86400); h,_=divmod(sec,3600); return f'{d}d{h}h'
+    except: return '?'
+def rate_reset(ts):
+    try: return dt.datetime.fromtimestamp(int(ts),dt.timezone.utc).strftime('%a %H:%MZ')
+    except: return '?'
+def frame(compact=False):
+    c=config(); pay,session=latest_usage(); info=pay.get('info') or {}; total=info.get('total_token_usage') or {}; last=info.get('last_token_usage') or {}; rate=pay.get('rate_limits') or {}; primary=rate.get('primary') or {}; credits=rate.get('credits') or {}
+    inp=int(total.get('input_tokens',0)); cached=int(total.get('cached_input_tokens',0)); new=max(0,inp-cached); out=int(total.get('output_tokens',0)); reasoning=int(total.get('reasoning_output_tokens',0)); grand=int(total.get('total_tokens',0)); win=int(info.get('model_context_window',0)); last_total=int(last.get('total_tokens',0)); ctxpct=(100*last_total/win) if win else 0
+    used,mt,rss,top=memstats(); mempct=(100*used/mt) if mt else 0; proj,branch=gitinfo(); disk=shutil.disk_usage(pathlib.Path.cwd()); diskpct=100*disk.used/disk.total if disk.total else 0
+    load=read_text('/proc/loadavg').split()[:3]; load='/'.join(load) if load else '?'; mcp=c['mcp']; hooks=hook_count(); agents=agent_count(); memory=os.getenv('CODEX_HUD_MEMORY_STATUS','off').strip().lower() or 'off'; host=socket.gethostname().split('.')[0]; sid=pathlib.Path(session).stem.rsplit('-',1)[-1][:8] if session else '?'; plan=rate.get('plan_type') or '?'; pct=primary.get('used_percent','?')
+    if compact:
+        return f'{host} mdl:{c["model"]}/{c["reason"]} tok c:{human(cached)} n:{human(new)} o:{human(out)} acct:{plan}:{pct}% mcp:{mcp} hk:{hooks} ag:{agents} ram:{gib(used)}/{gib(mt)} mem:{memory}'
+    robot=('🤖'*min(agents,6))+('+' if agents>6 else '') if agents else '🤖·'
+    memory_on=memory not in ('off','0','false','none','disabled'); memory_icon=paint('●','green' if memory_on else 'gray')
+    pct_tone=tone_for(pct)
+    lines=[
+      rule(title='CODEX HUD+  LIVE TELEMETRY'),
+      f"{paint('⌂','cyan',True)} {paint(os.getenv('USER','?')+'@'+host,'white',True)}  {paint('cwd','gray')}:{pathlib.Path.cwd()}  {paint('git','gray')}:{paint(branch,'green' if '+' not in branch else 'yellow')}",
+      f"{paint('◆ MODEL','violet',True)} {paint(c['model'],'white',True)}  reasoning:{paint(c['reason'],'cyan')}  codex:{codex_version()}  sid:{sid}  cost:{paint('n/a','gray')}",
+      f"{paint('◈ TOKENS','blue',True)} cached:{paint(human(cached),'cyan')} new:{paint(human(new),'green')} out:{paint(human(out),'yellow')} think:{paint(human(reasoning),'violet')} total:{paint(human(grand),'white',True)}  ctx:{human(last_total)}/{human(win)}",
+      f"{paint('CTX','gray')} {bar(ctxpct)} {paint(f'{ctxpct:.1f}%',tone_for(ctxpct))}  {paint('ACCOUNT','gray')} {bar(pct)} {paint(str(pct)+'%',pct_tone)} {plan}/{primary.get('window_minutes','?')}m reset:{rate_reset(primary.get('resets_at'))} credits:{credits.get('balance','?')}",
+      f"{paint(robot,'violet',True)} agents:{paint(agents,'violet')}  {paint('⬡','blue')} mcp:{paint(mcp,'blue')}  {paint('⚡','yellow')} hooks:{paint(hooks,'yellow')}  {memory_icon} MEMORY:{paint(memory,'green' if memory_on else 'gray')}  project:{proj}",
+      f"{paint('▣ SYSTEM','cyan',True)} mem:{bar(mempct,8)} {gib(used)}/{gib(mt)} node:{gib(rss['node'])} codex:{gib(rss['codex'])} top:{top[0]}:{gib(top[1])} load:{load} disk:{diskpct:.0f}% up:{uptime()}",
+      paint('◉ OMX ','orange',True)+omx_line(),
+      rule(left='╰',right='╯'),
+    ]
+    return '\n'.join(lines)
+def codex_version():
+    try: return subprocess.check_output(['codex','--version'],stderr=subprocess.DEVNULL,text=True,timeout=.5).strip().replace('codex-cli ','')
+    except: return '?'
+def tmux_install():
+    if not os.getenv('TMUX'): raise SystemExit('codex-hud --tmux requires tmux')
+    fmt='#{pane_id}\t#{pane_start_command}'
+    rows=subprocess.check_output(['tmux','list-panes','-F',fmt],text=True).splitlines(); current=os.getenv('TMUX_PANE',''); target=None
+    for row in rows:
+        pid,_,cmd=row.partition('\t')
+        if pid!=current and ('hud' in cmd.lower() or 'codex-hud' in cmd.lower()): target=pid; break
+    command=f'exec {HOME}/.local/bin/codex-hud --watch'
+    if target: subprocess.run(['tmux','respawn-pane','-k','-t',target,command],check=True)
+    else:
+        target=subprocess.check_output(['tmux','split-window','-v','-l','9','-d','-P','-F','#{pane_id}',command],text=True).strip()
+    subprocess.run(['tmux','resize-pane','-t',target,'-y','9'],check=False)
+    subprocess.run(['tmux','select-pane','-t',target,'-T','CODEX HUD+'],check=False)
+    print(f'CODEX HUD+ active in pane {target}')
+def main():
+    p=argparse.ArgumentParser(); p.add_argument('--version',action='version',version=f'CODEX HUD+ {VERSION}'); p.add_argument('--compact',action='store_true'); p.add_argument('--watch',action='store_true'); p.add_argument('--tmux',action='store_true'); p.add_argument('--interval',type=float,default=2.0); a=p.parse_args()
+    if a.tmux: return tmux_install()
+    while True:
+        if a.watch: sys.stdout.write('\033[H\033[2J')
+        print(frame(a.compact),flush=True)
+        if not a.watch: break
+        time.sleep(max(.5,a.interval))
+if __name__=='__main__': main()
