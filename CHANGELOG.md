@@ -17,6 +17,7 @@ All notable changes are documented here. The project follows semantic versioning
 ### Changed
 
 - Account reset timestamps now show weekday, date, local time, and timezone; `CODEX_HUD_TIMEZONE` or `~/.config/codex-hud/timezone` selects an IANA timezone.
+- Documented the meaning and current OMX 0.20.2 behavior of `turns` and `total-turns`.
 - Renamed the GitHub repository from `codex_hud` to `codex-hud`; GitHub redirects the former URL.
 - Removed the unrelated Codex Guides plugin from the HUD prerequisite path.
 - Removed product-specific memory integration and environment-specific examples.

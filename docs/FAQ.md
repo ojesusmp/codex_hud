@@ -20,6 +20,12 @@ The available Codex session telemetry does not provide an authoritative monetary
 
 Yes. OMX is optional; its line becomes an unavailable placeholder.
 
+## What do OMX `turns` and `total-turns` mean?
+
+`turns` is OMX's `session_turns` counter: completed lead-session turns recorded by the OMX notification hook. `total-turns` is OMX's `total_turns` metric from `.omx/metrics.json`, shown by the full OMX preset. They count turns, not tokens, tool calls, or subagents.
+
+In OMX 0.20.2, session startup resets both counters and each completed lead-session turn increments both, so they normally show the same number. The separate labels are retained because they are produced by OMX and may diverge in other versions or longer-lived metrics files.
+
 ## Can I use it without tmux?
 
 Yes. Use one-shot or watch mode. Only the tmux status integration and `--tmux` require tmux.
