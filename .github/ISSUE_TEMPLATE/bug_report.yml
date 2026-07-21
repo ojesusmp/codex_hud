@@ -1,5 +1,5 @@
 name: Bug report
-description: Report a reproducible CODEX HUD+ defect
+description: Report a reproducible Codex HUD defect
 title: "[Bug]: "
 labels: [bug]
 body:

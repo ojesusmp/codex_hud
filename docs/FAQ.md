@@ -1,8 +1,12 @@
 # Frequently asked questions
 
-## Does CODEX HUD+ upload telemetry?
+## Does Codex HUD upload telemetry?
 
 No. The executable makes no network requests and renders on-device information only.
+
+## Is this Codex Hub?
+
+No. The name is **Codex HUD**, where HUD means “heads-up display.” The repository and executable are both named `codex-hud`.
 
 ## Does it read prompts or responses?
 

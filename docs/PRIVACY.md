@@ -1,6 +1,6 @@
 # Privacy
 
-CODEX HUD+ is designed for on-device observability.
+Codex HUD is designed for on-device observability.
 
 ## Data read
 

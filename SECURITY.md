@@ -12,13 +12,13 @@ Security fixes are applied to the latest release and the `main` branch.
 
 ## Reporting a vulnerability
 
-Use [GitHub private vulnerability reporting](https://github.com/ojesusmp/codex_hud/security/advisories/new). Do not open a public issue for a suspected vulnerability.
+Use [GitHub private vulnerability reporting](https://github.com/ojesusmp/codex-hud/security/advisories/new). Do not open a public issue for a suspected vulnerability.
 
 Include the affected version, operating system, reproduction steps, expected behavior and impact. Remove session text, credentials, private paths, access tokens and other sensitive data before submitting evidence.
 
 ## Security boundaries
 
-CODEX HUD+:
+Codex HUD:
 
 - reads on-device process metadata, Git state, system statistics and Codex configuration;
 - parses only `token_count` events from the newest Codex session JSONL file;

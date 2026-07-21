@@ -2,6 +2,7 @@
 
 | Problem | Cause | Resolution |
 |---|---|---|
+| Repository not found, or a different “hub” project opens | The name or URL is wrong. | Use **Codex HUD** (heads-up display) from `https://github.com/ojesusmp/codex-hud`. |
 | Model or token fields show `?`/`0` | Codex configuration or session telemetry is unavailable. | Start a Codex session and confirm the Codex data directory is readable. |
 | OMX shows unavailable | OMX is not installed or not on `PATH`. | Install OMX or ignore the optional line. |
 | Agent count remains zero | No tracked non-leader agent is active. | Start an agent workflow and confirm OMX tracking state exists. |

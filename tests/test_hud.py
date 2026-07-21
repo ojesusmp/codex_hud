@@ -27,7 +27,7 @@ class HudTests(unittest.TestCase):
         result = run()
         self.assertEqual(result.returncode, 0, result.stderr)
         for marker in (
-            "CODEX HUD+",
+            "CODEX HUD",
             "MODEL",
             "TOKENS",
             "ACCOUNT",
@@ -58,7 +58,7 @@ class HudTests(unittest.TestCase):
     def test_version(self):
         result = run("--version")
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertRegex(result.stdout, r"CODEX HUD\+ \d+\.\d+\.\d+")
+        self.assertRegex(result.stdout, r"Codex HUD \d+\.\d+\.\d+")
 
     def test_codo_forwards_codex_options_and_loads_profile(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -169,7 +169,22 @@ class HudTests(unittest.TestCase):
     def test_installer_uses_non_repeating_status_line(self):
         with tempfile.TemporaryDirectory() as tmp:
             home = pathlib.Path(tmp)
-            env = {**os.environ, "HOME": str(home)}
+            fake_bin = home / "fake-bin"
+            fake_bin.mkdir()
+            for name in ("codex", "tmux"):
+                command = fake_bin / name
+                command.write_text("#!/usr/bin/env bash\nexit 0\n")
+                command.chmod(0o700)
+            (home / ".codex").mkdir()
+            (home / ".codex/config.toml").write_text("")
+            (home / ".tmux.conf").write_text(
+                "before\n# CODEX-HUD+:START\nlegacy\n# CODEX-HUD+:END\nafter\n"
+            )
+            env = {
+                **os.environ,
+                "HOME": str(home),
+                "PATH": f"{fake_bin}:{os.environ['PATH']}",
+            }
             result = subprocess.run(
                 [str(ROOT / "install.sh")],
                 cwd=ROOT,
@@ -185,3 +200,54 @@ class HudTests(unittest.TestCase):
             for duplicate in ('"project-root"', '"model-name"', '"context-used"'):
                 self.assertNotIn(duplicate, config)
             self.assertTrue((home / ".local/bin/codo").is_file())
+            tmux_config = (home / ".tmux.conf").read_text()
+            self.assertNotIn("CODEX-HUD+", tmux_config)
+            self.assertEqual(tmux_config.count("# CODEX-HUD:START"), 1)
+            self.assertEqual(tmux_config.count("# CODEX-HUD:END"), 1)
+
+    def test_installer_stops_and_announces_missing_prerequisite(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            env = {
+                **os.environ,
+                "HOME": tmp,
+                "CODO_CODEX_COMMAND": "codex-definitely-not-installed",
+            }
+            result = subprocess.run(
+                [str(ROOT / "install.sh"), "--check"],
+                cwd=ROOT,
+                env=env,
+                text=True,
+                capture_output=True,
+                timeout=15,
+            )
+            self.assertEqual(result.returncode, 1)
+            self.assertIn("missing: Codex CLI", result.stderr)
+            self.assertIn("no changes were made", result.stderr)
+            self.assertFalse((pathlib.Path(tmp) / ".local/bin/codo").exists())
+
+    def test_installer_does_not_require_unrelated_plugins(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = pathlib.Path(tmp)
+            fake_bin = root / "fake-bin"
+            fake_bin.mkdir()
+            for name in ("codex", "tmux"):
+                command = fake_bin / name
+                command.write_text("#!/usr/bin/env bash\nexit 0\n")
+                command.chmod(0o700)
+            env = {
+                **os.environ,
+                "HOME": tmp,
+                "PATH": f"{fake_bin}:{os.environ['PATH']}",
+            }
+            result = subprocess.run(
+                [str(ROOT / "install.sh"), "--check"],
+                cwd=ROOT,
+                env=env,
+                text=True,
+                capture_output=True,
+                timeout=15,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertNotIn("plugin", result.stdout.lower())
+            self.assertNotIn("plugin", result.stderr.lower())
+            self.assertFalse((root / ".local/bin/codo").exists())

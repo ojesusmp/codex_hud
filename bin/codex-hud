@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Codex HUD+: on-device, read-only session and system telemetry."""
+"""Codex HUD: on-device, read-only session and system telemetry."""
 from __future__ import annotations
 import argparse, datetime as dt, glob, json, os, pathlib, re, shutil, socket, subprocess, sys, time
 VERSION='1.1.0'
@@ -121,7 +121,7 @@ def frame(compact=False):
     memory_on=memory not in ('off','0','false','none','disabled'); memory_icon=paint('●','green' if memory_on else 'gray')
     pct_tone=tone_for(pct)
     lines=[
-      rule(title='CODEX HUD+  LIVE TELEMETRY'),
+      rule(title='CODEX HUD  LIVE TELEMETRY'),
       f"{paint('⌂','cyan',True)} {paint(os.getenv('USER','?')+'@'+host,'white',True)}  {paint('cwd','gray')}:{pathlib.Path.cwd()}  {paint('git','gray')}:{paint(branch,'green' if '+' not in branch else 'yellow')}",
       f"{paint('◆ MODEL','violet',True)} {paint(c['model'],'white',True)}  reasoning:{paint(c['reason'],'cyan')}  policy:{paint(approval,'yellow')}/{paint(sandbox,'yellow')}  codex:{codex_version()}  sid:{sid}",
       f"{paint('◈ TOKENS','blue',True)} cached:{paint(human(cached),'cyan')} new:{paint(human(new),'green')} out:{paint(human(out),'yellow')} think:{paint(human(reasoning),'violet')} total:{paint(human(grand),'white',True)}  ctx:{human(last_total)}/{human(win)}",
@@ -147,10 +147,10 @@ def tmux_install():
     else:
         target=subprocess.check_output(['tmux','split-window','-v','-l','9','-d','-P','-F','#{pane_id}',command],text=True).strip()
     subprocess.run(['tmux','resize-pane','-t',target,'-y','9'],check=False)
-    subprocess.run(['tmux','select-pane','-t',target,'-T','CODEX HUD+'],check=False)
-    print(f'CODEX HUD+ active in pane {target}')
+    subprocess.run(['tmux','select-pane','-t',target,'-T','Codex HUD'],check=False)
+    print(f'Codex HUD active in pane {target}')
 def main():
-    p=argparse.ArgumentParser(); p.add_argument('--version',action='version',version=f'CODEX HUD+ {VERSION}'); p.add_argument('--compact',action='store_true'); p.add_argument('--watch',action='store_true'); p.add_argument('--tmux',action='store_true'); p.add_argument('--interval',type=float,default=2.0); a=p.parse_args()
+    p=argparse.ArgumentParser(description='Codex HUD heads-up display'); p.add_argument('--version',action='version',version=f'Codex HUD {VERSION}'); p.add_argument('--compact',action='store_true'); p.add_argument('--watch',action='store_true'); p.add_argument('--tmux',action='store_true'); p.add_argument('--interval',type=float,default=2.0); a=p.parse_args()
     if a.tmux: return tmux_install()
     while True:
         if a.watch: sys.stdout.write('\033[H\033[2J')

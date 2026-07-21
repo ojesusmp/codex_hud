@@ -1,6 +1,6 @@
 # Architecture
 
-CODEX HUD+ is a single Python executable with no imported third-party packages.
+Codex HUD is a single Python executable with no imported third-party packages.
 
 ```text
 Codex configuration ─┐

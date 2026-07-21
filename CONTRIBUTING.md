@@ -5,8 +5,8 @@ Contributions are welcome through issues and pull requests.
 ## Development setup
 
 ```bash
-git clone https://github.com/ojesusmp/codex_hud.git
-cd codex_hud
+git clone https://github.com/ojesusmp/codex-hud.git
+cd codex-hud
 python3 -m py_compile bin/codex-hud tests/test_hud.py
 python3 -m unittest discover -s tests -v
 NO_COLOR=1 bin/codex-hud

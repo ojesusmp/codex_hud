@@ -46,4 +46,4 @@ The launcher does not enable full access. Users who deliberately need a differen
 
 ## tmux managed block
 
-The installer adds a block delimited by `CODEX-HUD+:START` and `CODEX-HUD+:END`. Re-running installation replaces only that block. The uninstaller removes only that block.
+The installer adds a block delimited by `CODEX-HUD:START` and `CODEX-HUD:END`. Re-running installation replaces only that block. The installer and uninstaller also recognize the legacy `CODEX-HUD+` markers so upgrades do not duplicate the status bar.

@@ -1,13 +1,13 @@
-# CODEX HUD+
+# Codex HUD
 
-[![CI](https://github.com/ojesusmp/codex_hud/actions/workflows/ci.yml/badge.svg)](https://github.com/ojesusmp/codex_hud/actions/workflows/ci.yml)
+[![CI](https://github.com/ojesusmp/codex-hud/actions/workflows/ci.yml/badge.svg)](https://github.com/ojesusmp/codex-hud/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/)
 
-A colorful, zero-dependency telemetry HUD for Codex CLI and Oh My Codex. It provides a live terminal dashboard, a compact tmux status segment, a concise native Codex TUI status line, and the optional `codo` launcher.
+A colorful, zero-dependency telemetry **heads-up display** for Codex CLI and Oh My Codex. The product name is **Codex HUD**, not “Codex Hub.” Its repository is `codex-hud`, its executable is `codex-hud`, and its optional launcher is `codo`.
 
 ```text
-╭─[ CODEX HUD+  LIVE TELEMETRY ]──────────────────────────────────────────────────────────╮
+╭─[ CODEX HUD  LIVE TELEMETRY ]───────────────────────────────────────────────────────────╮
 ⌂ user@workstation  cwd:~/project  git:main+
 ◆ MODEL <model>  reasoning:high  codex:<version>  sid:<session>  cost:n/a
 ◈ TOKENS cached:<count> new:<count> out:<count> think:<count> total:<count> ctx:<used>/<window>
@@ -41,8 +41,8 @@ The HUD does not estimate billing. It shows `cost:n/a` because Codex session tel
 |---|---|
 | Linux with `/proc` | Required |
 | Python 3.10 or newer | Required |
-| Codex CLI | Recommended for complete session telemetry |
-| tmux | Optional, required for `--tmux` and the status-bar integration |
+| Codex CLI | Required by the installer and `codo` |
+| tmux | Required by the installer for the `codo` HUD pane and status bar |
 | Oh My Codex (`omx`) | Optional, enables the OMX line |
 
 macOS and Windows are not currently supported because process and memory collection use Linux `/proc`.
@@ -50,20 +50,42 @@ macOS and Windows are not currently supported because process and memory collect
 ## Installation
 
 ```bash
-git clone https://github.com/ojesusmp/codex_hud.git
-cd codex_hud
+git clone https://github.com/ojesusmp/codex-hud.git
+cd codex-hud
 ./install.sh
 ```
 
-The installer:
+Before changing files, the installer verifies Linux `/proc`, Python 3.10+, the
+Codex CLI, and tmux. If anything is missing,
+an interactive install announces the exact prerequisites and asks before
+installing them. A non-interactive run stops and requires explicit approval
+with `--install-prerequisites`.
+
+```bash
+./install.sh --check                  # read-only prerequisite check
+./install.sh --install-prerequisites  # approve missing prerequisite installs
+```
+
+The installer then:
 
 1. Installs `codex-hud` into `~/.local/bin`.
-2. Installs `codo`, an optional Codex launcher that manages the tmux HUD pane.
+2. Installs `codo`, the Codex launcher that manages the tmux HUD pane.
 3. Adds a concise, non-repeating Codex status line only when no user-owned status line exists.
 4. Adds a clearly marked, replaceable block to `~/.tmux.conf`.
 5. Reloads tmux when run inside an active tmux client.
 
 Restart Codex once after installation so it reloads `[tui].status_line`.
+
+### Prompt another Codex session
+
+Paste this exact request so “HUD” cannot be mistaken for “hub”:
+
+```text
+Install Codex HUD (the heads-up display, not a hub) from
+https://github.com/ojesusmp/codex-hud. Follow that repository's README,
+run ./install.sh --check first, then run ./install.sh. Do not install an
+unrelated package or plugin with a similar name.
+```
 
 ## Usage
 
@@ -115,7 +137,7 @@ See [Configuration](docs/CONFIGURATION.md) for the full field list and customiza
 
 ## Privacy and safety
 
-CODEX HUD+ is read-only and operates entirely on-device. It parses only `token_count` events from the newest Codex session log and never sends telemetry. It does not read credential stores or print authentication values. See [Privacy](docs/PRIVACY.md) and [Security](SECURITY.md).
+Codex HUD is read-only and operates entirely on-device. It parses only `token_count` events from the newest Codex session log and never sends telemetry. It does not read credential stores or print authentication values. See [Privacy](docs/PRIVACY.md) and [Security](SECURITY.md).
 
 ## Documentation
 
@@ -136,7 +158,7 @@ CODEX HUD+ is read-only and operates entirely on-device. It parses only `token_c
 ./uninstall.sh
 ```
 
-The uninstaller removes the executable and the managed tmux block. A native Codex status line is removed only when it still carries the CODEX HUD+ managed marker.
+The uninstaller removes the executable and the managed tmux block. A native Codex status line is removed only when it still carries the Codex HUD managed marker.
 
 ## License
 
