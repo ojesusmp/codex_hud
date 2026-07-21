@@ -11,7 +11,7 @@ A colorful, zero-dependency telemetry **heads-up display** for Codex CLI and Oh 
 ⌂ user@workstation  cwd:~/project  git:main+
 ◆ MODEL <model>  reasoning:high  codex:<version>  sid:<session>  cost:n/a
 ◈ TOKENS cached:<count> new:<count> out:<count> think:<count> total:<count> ctx:<used>/<window>
-CTX █████████░░░ 72%  ACCOUNT ████░░░░░░░░ 34% <plan>/<window> reset:<time>
+CTX █████████░░░ 72%  ACCOUNT ████░░░░░░░░ 34% <plan>/<window> reset:Sat 07/25 12:52 EDT
 🤖🤖 agents:2  ⬡ mcp:3  ⚡ hooks:1  ● MEMORY:ready  project:example
 ▣ SYSTEM mem:███░░░░░ <used>/<total> node:<rss> codex:<rss> load:<averages> disk:<percent>
 ◉ OMX [OMX] example/main | team:2 workers | turns:42
@@ -116,6 +116,17 @@ sandbox_mode = "workspace-write"
 ```
 
 Environment controls are documented in [Configuration](docs/CONFIGURATION.md). Explicit `--profile`, `--model`, and `model_reasoning_effort` arguments suppress the matching launcher default.
+
+### Local reset time
+
+Reset timestamps include the date, local time, and timezone, for example `Sat 07/25 12:52 EDT`. Configure an IANA timezone persistently:
+
+```bash
+mkdir -p ~/.config/codex-hud
+printf '%s\n' America/New_York > ~/.config/codex-hud/timezone
+```
+
+`CODEX_HUD_TIMEZONE` provides an environment-variable override. See [Configuration](docs/CONFIGURATION.md).
 
 ### Optional memory status
 

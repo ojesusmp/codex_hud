@@ -135,6 +135,39 @@ class HudTests(unittest.TestCase):
             self.assertIn("mdl:active-model/high", result.stdout)
             self.assertIn("pol:never/danger-full-access", result.stdout)
 
+    def test_reset_uses_configured_local_timezone(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            home = pathlib.Path(tmp)
+            codex_home = home / ".codex"
+            sessions = codex_home / "sessions/2026/07/21"
+            sessions.mkdir(parents=True)
+            (codex_home / "config.toml").write_text("")
+            timezone = home / ".config/codex-hud/timezone"
+            timezone.parent.mkdir(parents=True)
+            timezone.write_text("America/New_York\n")
+            (sessions / "rollout-reset.jsonl").write_text(
+                '{"type":"event_msg","payload":{"type":"token_count",'
+                '"info":{"model_context_window":1000,"last_token_usage":'
+                '{"total_tokens":100}},"rate_limits":{"plan_type":"prolite",'
+                '"primary":{"used_percent":41,"window_minutes":10080,'
+                '"resets_at":1784998320}}}}\n'
+            )
+            result = subprocess.run(
+                [str(HUD)],
+                cwd=ROOT,
+                env={
+                    **os.environ,
+                    "HOME": str(home),
+                    "CODEX_HOME": str(codex_home),
+                    "NO_COLOR": "1",
+                },
+                text=True,
+                capture_output=True,
+                timeout=15,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("reset:Sat 07/25 12:52 EDT", result.stdout)
+
     def test_codo_removes_managed_hud_pane_on_exit(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = pathlib.Path(tmp)

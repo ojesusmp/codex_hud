@@ -2,7 +2,8 @@
 """Codex HUD: on-device, read-only session and system telemetry."""
 from __future__ import annotations
 import argparse, datetime as dt, glob, json, os, pathlib, re, shutil, socket, subprocess, sys, time
-VERSION='1.1.0'
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+VERSION='1.2.0'
 HOME=pathlib.Path.home(); CODEX=pathlib.Path(os.getenv('CODEX_HOME',HOME/'.codex')).expanduser()
 ANSI_RE=re.compile(r'\x1b\[[0-9;]*m')
 COLOR=sys.stdout.isatty() and not os.getenv('NO_COLOR')
@@ -107,8 +108,16 @@ def uptime():
     try:
         sec=int(float(read_text('/proc/uptime').split()[0])); d,sec=divmod(sec,86400); h,_=divmod(sec,3600); return f'{d}d{h}h'
     except: return '?'
+def display_timezone():
+    name=os.getenv('CODEX_HUD_TIMEZONE','').strip()
+    if not name:
+        name=read_text(HOME/'.config/codex-hud/timezone').strip()
+    if name:
+        try: return ZoneInfo(name)
+        except (ZoneInfoNotFoundError,ValueError): pass
+    return dt.datetime.now().astimezone().tzinfo or dt.timezone.utc
 def rate_reset(ts):
-    try: return dt.datetime.fromtimestamp(int(ts),dt.timezone.utc).strftime('%a %H:%MZ')
+    try: return dt.datetime.fromtimestamp(int(ts),dt.timezone.utc).astimezone(display_timezone()).strftime('%a %m/%d %H:%M %Z')
     except: return '?'
 def frame(compact=False):
     c=config(); pay,session,runtime=latest_usage(); c['model']=runtime.get('model') or c['model']; c['reason']=runtime.get('reason') or c['reason']; approval=runtime.get('approval') or '?'; sandbox=runtime.get('sandbox') or '?'; info=pay.get('info') or {}; total=info.get('total_token_usage') or {}; last=info.get('last_token_usage') or {}; rate=pay.get('rate_limits') or {}; primary=rate.get('primary') or {}; credits=rate.get('credits') or {}

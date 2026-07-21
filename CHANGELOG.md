@@ -2,7 +2,7 @@
 
 All notable changes are documented here. The project follows semantic versioning.
 
-## [1.1.0] - 2026-07-21
+## [1.2.0] - 2026-07-21
 
 ### Added
 
@@ -16,6 +16,7 @@ All notable changes are documented here. The project follows semantic versioning
 
 ### Changed
 
+- Account reset timestamps now show weekday, date, local time, and timezone; `CODEX_HUD_TIMEZONE` or `~/.config/codex-hud/timezone` selects an IANA timezone.
 - Renamed the GitHub repository from `codex_hud` to `codex-hud`; GitHub redirects the former URL.
 - Removed the unrelated Codex Guides plugin from the HUD prerequisite path.
 - Removed product-specific memory integration and environment-specific examples.

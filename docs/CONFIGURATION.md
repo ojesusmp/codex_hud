@@ -6,6 +6,7 @@
 |---|---|---|
 | `NO_COLOR` | unset | Disable ANSI color when set to any non-empty value. |
 | `CODEX_HUD_MEMORY_STATUS` | `off` | Display-only generic memory-provider status. |
+| `CODEX_HUD_TIMEZONE` | local system timezone | IANA timezone used for account reset dates and times, such as `America/New_York`. |
 | `HOME` | process environment | Locates Codex and OMX configuration. |
 | `CODEX_HOME` | `~/.codex` | Overrides the Codex configuration and session-data directory. |
 | `TMUX` / `TMUX_PANE` | tmux environment | Enables pane installation and pane selection. |
@@ -15,6 +16,23 @@
 | `CODO_REASONING_EFFORT` | unset | Optional `model_reasoning_effort` override passed to Codex. |
 | `CODO_CODEX_COMMAND` | `codex` | Alternate Codex executable, useful for testing or versioned installations. |
 | `CODO_HUD_COMMAND` | `codex-hud` | Alternate HUD executable. |
+
+## Reset timezone
+
+Account reset timestamps use the local timezone and display as `Sat 07/25 12:52 EDT`. Set an IANA timezone with either method:
+
+```bash
+export CODEX_HUD_TIMEZONE=America/New_York
+```
+
+Or save it persistently without changing shell startup files:
+
+```bash
+mkdir -p ~/.config/codex-hud
+printf '%s\n' America/New_York > ~/.config/codex-hud/timezone
+```
+
+The environment variable takes precedence over the file. If either value is invalid or absent, the HUD uses the operating system's local timezone.
 
 ## Command options
 
